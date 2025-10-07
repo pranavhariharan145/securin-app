@@ -1,6 +1,4 @@
 // server.js
-
-
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
@@ -235,7 +233,7 @@ app.get('/api/recipes/search', (req, res) => {
   if (cal) {
     where.push(`(CAST(REPLACE(REPLACE(json_extract(nutrients,'$.calories'),'kcal',''),' ','') AS REAL) + 0) ${cal.op} ?`);
     params.push(cal.val);
-  } // Cast pattern ensures numeric comparison even if JSON stores "389 kcal" [web:32][web:265]
+  } // Cast pattern ensures numeric comparison even if JSON stores "389 kcal"
 
   // title partial match, case-insensitive
   if (req.query.title && String(req.query.title).trim() !== '') {
@@ -268,7 +266,7 @@ app.get('/api/recipes/search', (req, res) => {
   const limit = Math.min(parseInt(req.query.limit || '10', 10), 200);
   const offset = (page - 1) * limit;
 
-  // Count first
+  // Count it
   const countSql = `SELECT COUNT(*) AS total FROM recipes ${whereSQL}`;
   db.get(countSql, params, (err1, row) => {
     if (err1) return res.status(500).json({ error: err1.message });
@@ -299,9 +297,23 @@ app.get('/api/recipes/search', (req, res) => {
     });
   });
 });
-
-
-
 app.listen(PORT, () => console.log(`API listening on http://localhost:${PORT}`));
 
 
+
+//2nd API Search
+// Sample things to search using api
+//High Calorie Chicken
+// http://localhost:3000/api/recipes/search?calories=>=500&title=chicken
+// Quick High-Rated Dishes:
+
+// http://localhost:3000/api/recipes/search?rating=>=4.8&total_time=<=30
+// Quick Southern Recipes:
+
+// http://localhost:3000/api/recipes/search?cuisine=Southern Recipes&total_time=<=60
+// Exact 4.5 Rating:
+
+// http://localhost:3000/api/recipes/search?rating=4.5
+// Page 2, Limit 5 (No Filters):
+
+// http://localhost:3000/api/recipes/search?page=2&limit=5
