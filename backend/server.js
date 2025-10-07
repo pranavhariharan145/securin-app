@@ -75,13 +75,13 @@ function loadJsonList(filePath){
 
 // optional
 app.get('/api/recipes', (req, res) => {
-  const limit = Math.min(Number(req.query.limit) || 25, 200); // basic pagination
+  const limit = Math.min(Number(req.query.limit) || 10, 200); // basic pagination
   const page = Math.max(Number(req.query.page) || 1, 1);
   const offset = (page - 1) * limit;
   const minCal = req.query.minCalories ? Number(req.query.minCalories) : null;
 
   const baseCols = `id, title, cuisine, rating, total_time,
-                    json_extract(nutrients,'$.calories') AS calories`; // JSON1 extract [web:181][web:32]
+                    json_extract(nutrients,'$.calories') AS calories`; // JSON1 extract 
 
   const sql = minCal !== null
     ? `SELECT ${baseCols} FROM recipes
@@ -131,8 +131,14 @@ app.post('/api/recipes/import'  , (req, res) => {
 // End-Point-1
 // GET /api/recipes?page=1&limit=10  (sorted by rating desc)
 app.get('/api/recipes', (req, res) => {
-  const page = Math.max(parseInt(req.query.page || '1', 10), 1);
-  const limit = Math.min(parseInt(req.query.limit || '10', 10), 200);
+const page = Math.max(parseInt(req.query.page || '1', 10), 1);
+const max_limit = 10; 
+const default_limit = '10'; 
+const limit = Math.min(
+    parseInt(req.query.limit || default_limit, 10), 
+    max_limit 
+);                                         
+  
   const offset = (page - 1) * limit;
 
   // 1) total count
@@ -158,7 +164,6 @@ app.get('/api/recipes', (req, res) => {
     });
   });
 });
-
 
 
 // GET /api/recipes/search?calories=<=400&title=pie&rating=>=4.5&cuisine=Southern&total_time=<=120&page=1&limit=10
