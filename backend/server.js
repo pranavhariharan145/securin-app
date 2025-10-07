@@ -34,7 +34,7 @@ db.serialize(() => {
       nutrients TEXT,
       serves TEXT
     )
-  `); // i am creating if its missing
+  `); // i am creating if its missing but still its optional
   db.run(`CREATE INDEX IF NOT EXISTS idx_recipes_rating ON recipes (rating)`); 
   db.run(`CREATE INDEX IF NOT EXISTS idx_recipes_nutrients_cal ON recipes (json_extract(nutrients,'$.calories'))`); 
 });
@@ -73,12 +73,9 @@ function loadJsonList(filePath){
   return [parsed];
 }
 
-// Routes
-app.get('/api/health', (req, res) => res.json({ ok: true, db: path.basename(DB_PATH) })); // simple check
-
 // optional
 app.get('/api/recipes', (req, res) => {
-  const limit = Math.min(Number(req.query.limit) || 25, 200); // basic pagination [web:179]
+  const limit = Math.min(Number(req.query.limit) || 25, 200); // basic pagination
   const page = Math.max(Number(req.query.page) || 1, 1);
   const offset = (page - 1) * limit;
   const minCal = req.query.minCalories ? Number(req.query.minCalories) : null;
@@ -101,30 +98,6 @@ app.get('/api/recipes', (req, res) => {
   });
 });
 
-// // Get one
-// app.get('/api/recipes/:id', (req, res) => {
-//   db.get(`SELECT * FROM recipes WHERE id = ?`, [Number(req.params.id)], (err, row) => {
-//     if (err) return res.status(500).json({ error: err.message });
-//     if (!row) return res.status(404).json({ error: 'Not found' });
-//     res.json(row);
-//   });
-// });
-
-// // Create one
-// app.post('/api/recipes', (req, res) => {
-//   const vals = normalize(req.body);
-//   const sql = `INSERT INTO recipes
-//     (cuisine, title, rating, prep_time, cook_time, total_time, description, nutrients, serves)
-//     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-//   db.run(sql, vals, function (err) {
-//     if (err) return res.status(400).json({ error: err.message });
-//     db.get(`SELECT * FROM recipes WHERE id = ?`, [this.lastID], (e, row) => {
-//       if (e) return res.status(500).json({ error: e.message });
-//       res.status(201).json(row);
-//     });
-//   });
-// });
-
 // Bulk import from JSON file by using Post request
 app.post('/api/recipes/import'  , (req, res) => {
   try {
@@ -143,7 +116,7 @@ app.post('/api/recipes/import'  , (req, res) => {
         if (err) {
           db.run('ROLLBACK');
           return res.status(500).json({ error: err.message });
-        }
+        } 
         db.run('COMMIT', (e) => {
           if (e) return res.status(500).json({ error: e.message });
           res.status(201).json({ imported: i, source: path.basename(JSON_PATH) });
@@ -154,31 +127,6 @@ app.post('/api/recipes/import'  , (req, res) => {
     res.status(400).json({ error: e.message });
   }
 });
-
-// // Update
-// app.put('/api/recipes/:id', (req, res) => {
-//   const vals = normalize(req.body);
-//   const sql = `UPDATE recipes SET
-//     cuisine=?, title=?, rating=?, prep_time=?, cook_time=?, total_time=?, description=?, nutrients=?, serves=?
-//     WHERE id=?`;
-//   db.run(sql, [...vals, Number(req.params.id)], function (err) {
-//     if (err) return res.status(400).json({ error: err.message });
-//     if (this.changes === 0) return res.status(404).json({ error: 'Not found' });
-//     db.get(`SELECT * FROM recipes WHERE id = ?`, [req.params.id], (e, row) => {
-//       if (e) return res.status(500).json({ error: e.message });
-//       res.json(row);
-//     });
-//   });
-// });
-
-// // Delete
-// app.delete('/api/recipes/:id', (req, res) => {
-//   db.run(`DELETE FROM recipes WHERE id = ?`, [Number(req.params.id)], function (err) {
-//     if (err) return res.status(500).json({ error: err.message });
-//     if (this.changes === 0) return res.status(404).json({ error: 'Not found' });
-//     res.json({ deleted: true, id: Number(req.params.id) });
-//   });
-// });
 
 // End-Point-1
 // GET /api/recipes?page=1&limit=10  (sorted by rating desc)
@@ -225,10 +173,8 @@ app.get('/api/recipes/search', (req, res) => {
     if (!Number.isFinite(num)) return null;
     return { op, val: num };
   };
-
   const where = [];
   const params = [];
-
   const cal = parseOpVal(req.query.calories);
   if (cal) {
     where.push(`(CAST(REPLACE(REPLACE(json_extract(nutrients,'$.calories'),'kcal',''),' ','') AS REAL) + 0) ${cal.op} ?`);
@@ -251,16 +197,13 @@ app.get('/api/recipes/search', (req, res) => {
     where.push(`total_time ${tt.op} ?`);
     params.push(tt.val);
   } 
-
   // rating comparison
   const rt = parseOpVal(req.query.rating);
   if (rt) {
     where.push(`rating ${rt.op} ?`);
     params.push(rt.val);
   } // Numeric comparison for rating [web:262]
-
   const whereSQL = where.length ? `WHERE ${where.join(' AND ')}` : '';
-
   // Pagination
   const page = Math.max(parseInt(req.query.page || '1', 10), 1);
   const limit = Math.min(parseInt(req.query.limit || '10', 10), 200);
